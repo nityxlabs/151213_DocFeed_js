@@ -1,0 +1,478 @@
+<html>
+<head>
+
+<title> 160522_Catechizer </title>
+
+<style>
+body {
+    background-color:#21252c;
+    font-family:Rockwell, "Courier New", Courier, Georgia, serif;
+    color:#282c35;
+    /*OTHER COLORS: Pink = f92772; Purple = ae81ff; Teal = 66d9ef; orange = fd9720;  */
+}
+
+.boxQuestion, .boxAnswer {
+    color: #6699cc;
+    font: 20px Rockwell, "Courier New", Courier, Georgia, serif;
+    text-align:left;
+    width:600px;
+    -moz-border-radius: 10px;
+    -webkit-border-radius: 10px;
+    border-radius: 10px;
+    cursor:pointer;
+}
+
+.boxAnswer {
+    color: #b2436d;
+}
+</style>
+
+<!--
+<script src = "/Users/Mokha/Documents/Web Design/Nityxlabs/JS Scripts/jQuery/jquery-2.1.4.min.js"></script>
+<script src = "/Users/Mokha/Documents/Web Design/Nityxlabs/JS Scripts/XDoc_StrTools.js"></script>
+
+<script src="/Users/Mokha/Documents/Web Design/Nityxlabs/151213_DocFeed_js/Classes/FullSent.js"></script>
+<script src="/Users/Mokha/Documents/Web Design/Nityxlabs/151213_DocFeed_js/Classes/classStemmer.js"></script>
+<script src="/Users/Mokha/Documents/Web Design/Nityxlabs/151213_DocFeed_js/Classes/DocAnalysis.js"></script>
+<script src="/Users/Mokha/Documents/Web Design/Nityxlabs/151213_DocFeed_js/Classes/SearchWord.js"></script> 
+-->
+
+<script src="../Classes/jquery-2.1.4.min.js"></script>
+<script src="../Classes/XDoc_StrTools.js"></script>
+<script src="../Classes/FullSent.js"></script>
+<script src="../Classes/classStemmer.js"></script>
+<script src="../Classes/DocManip.js"></script>
+<script src="../Classes/DocAnalysis.js"></script>
+<script src="../Classes/SearchWord.js"></script>
+<script src="../Classes/PhraseWords.js"></script>
+
+<script src = "../Classes/RegExpFuzzyV2.js"></script>
+
+<!-- <script src = "../Classes/CatechizerV2.js"></script> -->
+<script src = "../Classes/CatechizerV3.js"></script>
+
+<script type = "text/javascript">
+//Global variables START//
+var isIE = document.all;
+var g_sentThres = 20;             //this is the minimum sentence character length to be considered a true sentence
+var g_stemMinLen = 2;         //the minimum character length for a string to be considered a stem
+var g_minSimThres = 0.9;      //minimum percentage similarity for 2 strings to be considered similar
+
+function date160307_quesFindAndPhrase (word, isents, objDoc, objQ) {
+    //VAR: word = string that is word that will be search
+    //VAR: isents = array of sentence indices that access sentences in objDoc.arrCompSent
+    //VAR: objDoc = 
+    //VAR: objQ = instance of class CatechizerV0
+    //METHOD: finds sentences that can be potential answer to questions & phrases the question
+
+    //go through each sentence
+    var pairQA = [];        //save question & answer pairs
+    for (var i in isents) {     //isents = array of sentence indices that contains word of interest
+        //see potential questions that can be asked
+        var currSent = objDoc.arrCompSent[isents[i]];
+        var possibleQues = objQ.questionTypeV2(word, currSent);
+        
+        //phrase question
+        for (var ques in possibleQues) {        //ques = question type, possibleQues[ ques ] = array of words found that address question
+            var quesType = possibleQues[ques];
+            for (var i in quesType) {         //quesType[ i ] = word in category
+                // console.log( "phrase question: " + objQ.questionPhrase(word, ques, quesType[i]) + 
+                //     "\n ANS: " + currSent );
+                var phraseQuestion = objQ.questionPhrase(word, ques, quesType[i]);
+                pairQA.push([phraseQuestion, currSent]);
+            }
+        }
+    }
+
+    return pairQA;
+}
+
+
+/*
+NEED TO FIX THIS FUNCTION AS IT IS VERY MESSY
+-Need to find a better way to find Question Structures without going through every word & every question structure for each sentence (perhaps indexing)
+-MAYBE: Index each sentence - find the question structures & the top words associated with each sentence
+-MAYBE: have RegExpFuzzy find candidate words before phrase - need a way to select candidate words before phrase
+-need to find more question structures
+*/
+
+
+function organizeQues(recordQA, word, arrSents, catechizer) {
+    //VAR: recordQA = hash where key = question category, value = array of sentence indices
+    //VAR: transposons = hash where key is element that will replace '@@key' in question structures 'qK', and value is an array of words that will each replace '@@key'
+    //VAR: catechizer = instance of Catechizer class, used to phrase word into question
+    //METHOD: organizes & phrases questions
+    var setQA = "";
+    for (var q in recordQA) {        //q = question category, recordQA = array of sentence indices
+        //retrieve the question phrase
+        var qPhrase = catechizer.phraseQuestion( q, {"x": word} )
+
+        setQA += "<div class = 'boxQuestion' style = 'padding-left:1em'> " + qPhrase + "</div>";
+        //write the question & answer pair
+        for (var sentI of recordQA[q]) {     //sentI = sentence index
+            setQA += "<div class = 'boxQuestion' style = 'padding-left:2em'> Q: " + qPhrase + "</div>";
+            setQA += "<div class = 'boxAnswer' style = 'padding-left:2em'> A: " + arrSents[sentI] + " (" + sentI + ")</div><br/><br/>";
+        }
+    }
+
+    return setQA;
+}
+
+function organizeQuesV2(recordQA, word, catechizer) {
+    //VAR: recordQA = hash where key = question category, value = array of sentence indices
+    //VAR: transposons = hash where key is element that will replace '@@key' in question structures 'qK', and value is an array of words that will each replace '@@key'
+    //VAR: catechizer = instance of Catechizer class, used to phrase word into question
+    //METHOD: organizes & phrases questions
+    var setQA = "";
+    for (var q in recordQA) {        //q = question category, recordQA = array of sentence indices
+        //retrieve the question phrase
+        var qPhrase = catechizer.phraseQuestion( q, {"x": word} )
+
+        setQA += "<div class = 'boxQuestion' style = 'padding-left:1em'> " + qPhrase + "</div>";
+        //write the question & answer pair
+        for (var liteSent of recordQA[q]) {     //sentI = sentence index
+            setQA += "<div class = 'boxQuestion' style = 'padding-left:2em'> Q: " + qPhrase + "</div>";
+            setQA += "<div class = 'boxAnswer' style = 'padding-left:2em'> A: " + liteSent + "</div><br/><br/>";
+        }
+    }
+
+    return setQA;
+}
+
+function findPhrases(phraseLen) {
+    //METHOD: finds all phrases within the document
+    var doc = $("#textUpload").val();
+
+    var objPW = new PhraseWords(phraseLen, 2);
+    var phrases = objPW.phraseFreq(doc);
+
+    return Object.keys(phrases);
+}
+
+function makeQuesV4() {
+    //METHOD: finds sentences that can be answers to specific questions
+
+    //retrieve document & split into full sentences
+    var objDoc = new FullSent( $("#textUpload").val(), g_sentThres );
+
+    //create stem words
+    var objStem = new classStemmer( $("#textUpload").val(), g_stemMinLen, g_minSimThres );
+    var arrStemSent = objStem.translateWordToStem( objDoc.arrCompSent );
+    var docStem = objStem.docWordToStem(objDoc.arrCompSent, false);     //true = includes common words, false = does not include common words
+
+    //find the top-occurring words
+    var docAnlys = new DocAnalysis(docStem, arrStemSent);
+    var arrTopStems = docAnlys.top_words(-12);        //the parameter is the standard deviation
+
+    //retrieve all top words
+    var arrTopWords = [];
+    for ( var eachStem of arrTopStems ) {
+
+        //if key is not present, then do not look for associated stems
+        if ( !(eachStem in objStem.hashSOW) )
+            continue
+
+        for ( var getWord of objStem.hashSOW[eachStem] )
+            arrTopWords.push(getWord);
+    }
+
+    //find all phrases in document
+    var phrase3 = findPhrases(3);
+    arrTopWords.push.apply(arrTopWords, phrase3);
+    var phrase2 = findPhrases(2);
+    arrTopWords.push.apply(arrTopWords, phrase2);
+
+
+    //TEST::
+    console.log("makeQV4 - phrase3 = ", phrase3);
+    console.log("makeQV4 - phrase2 = ", phrase2);
+    console.log("makeQV4 - arrTopWords = ", arrTopWords);
+
+
+    //find all questions that can be answered for each word
+    var allQA = "";
+    var catechizer = new Catechizer();
+    for (var eachWord of arrTopWords) {
+        var recordQA = [];
+
+        //TEST::
+        console.log("eachWord = ", eachWord);
+
+
+        //create transposable element for DiversiFuzzy & RegExpFuzzy
+        // var transposon = { "x": ["\\b" + eachWord + "\\b::0::0"] };
+        var transposon = { 'x': ['\\b' + eachWord + '\\b'] };
+
+        //go through each sentence to see which questions can be asked for each word
+        var recordQA = {};           //hash where key = question category, value = array of sentence indices
+        for (var i in objDoc.arrCompSent) {     //i = sentence index, objDoc.arrCompSent[i] = sentence at index
+            //see which question structures are present
+            // var getQT = [];     //getQT = get Question Types
+            var getQT = [];     //getQT = get Question Types
+            getQT = catechizer.answerPresentTEMPv2( objDoc.arrCompSent[i], transposon );
+
+            if (getQT.length == 0)
+                continue;
+
+            //PART OF organizeQues()        //SWITCH A
+            // for (var qtype of getQT)
+            //     (qtype in recordQA) ? recordQA[qtype].push(i) : recordQA[qtype] = [i];
+
+            //PART OF organizeQuesV2()      //SWITCH B
+            //retrieve highlighted sentences
+            var liteQA = hiLiteSent(objDoc.arrCompSent[i], transposon, getQT);
+            for (var qtype in liteQA) {
+                (qtype in recordQA) ? recordQA[qtype].push.apply(recordQA[qtype], liteQA[qtype]) : recordQA[qtype] = liteQA[qtype];
+            }
+        }
+
+        //if any QA pairs are recorded, then save to variable 'allQA' to present later
+        if (Object.keys(recordQA).length > 0) {
+            allQA += "<div class = 'boxAnswer'> ----- " + eachWord + " ----- </div><br/>";
+            //get question & answers
+            // var setQA = organizeQues(recordQA, eachWord, objDoc.arrCompSent, catechizer);        //SWITCH A
+            var setQA = organizeQuesV2(recordQA, eachWord, catechizer);                             //SWITCH B
+            allQA += setQA;
+        }
+    }
+
+    
+    //TEST:: show top-occurring words
+    showTopWords(docAnlys, objStem, 1.5);
+
+
+    $("#areaQues").html(allQA);
+}
+
+
+function hiLiteSent(str, transposon, getQT) {
+    //VAR: str = sentence that is a potential answer to question types
+    //VAR: transposon = hash that will be used in DiversiFuzzy.insertAllReZ, replaces @@key (key is the key in the hash) with array of words assigned as value
+    //VAR: getQT = array of all question types that are found in 'str'
+    //METHOD: returns hash where key is the question type & value is an array of sentences where sub-parts are highlighted
+    //NOTE: as of now, only works with transposon with 1 value
+
+    //create StrMetric
+    var strMetric = new StrMetric(str, /\s/g);
+
+    var liteQA = {};        
+    for (var qtype of getQT) {
+        //retrieve the question structure
+        var qModels = Catechizer.questionModels(qtype);     //array of question structures for specific question category
+        for (var eachQ of qModels) {
+            //create transposon
+            var phraseReZ = DiversiFuzzy.insertAllReZ(eachQ, transposon, 2);
+            for (var eachReZ of phraseReZ) {
+                var qModel = new RegExpFuzzy( eachReZ );
+
+                //if question structure is found, then create highlighted version of that question
+                var found = qModel.search( str );
+                if (found.length > 0) {
+                    var sentHiLite = strMetric.highlightStr( found[0] );
+                    (qtype in liteQA) ? liteQA[qtype].push(sentHiLite) : liteQA[qtype] = [sentHiLite];
+                }
+            }
+        }
+    }
+
+    return liteQA;
+
+}
+
+//THIS IS A TEST FUNCTION, JUST TO SEE TOP WORDS IN A DOCUMENT
+function showTopWords(docAnlys, objStem, thresStd) {
+    //VAR: docAnlys = a DocAnalysis object that I assume is being used to process stem words
+    //VAR: objStem = an instance of classStemmer
+    //VAR: thresStd = integer that is the threshold standard deviation for docAnlys.top_words_stat()
+    //METHOD: displays the top-occurring words associated with each stem
+
+    //find all top-occurring stems
+    var objTopStems = docAnlys.top_words_stat(thresStd);
+    var recordTop = "";
+    for (var eachStem in objTopStems) {
+
+        //if key is not present, then do not look for associated stems
+        if ( !(eachStem in objStem.hashSOW) )
+            continue
+
+        for ( var getWord of objStem.hashSOW[eachStem] )
+            recordTop += getWord + ": " + objTopStems[ eachStem ] + "\n";
+    }
+
+    console.log("recordTop = ", recordTop);
+}
+
+
+//PERHAPS CAN DELETE LATER, AS THIS IS SUPERSEDED BY makeQuesV4()
+// function printQA(recordQA, word) {
+//     //VAR: recordQA = array where each element is a Q & A pair
+//     //VAR: word = string that is the word of interest
+//     //METHOD: prints the question & answers for a specific word
+//     var allQA = "";
+//     allQA += "<div class = 'boxAnswer'> ----- " + word + " ----- </div><br/>";
+//     for (var eachQA of recordQA)
+//         allQA += eachQA;
+
+//     return allQA;
+// }
+
+// function makeQuesV3() {
+//     //METHOD: finds sentences that can be answers to specific questions
+
+//     //retrieve document & split into full sentences
+//     var objDoc = new FullSent( $("#textUpload").val(), g_sentThres );
+
+//     //create stem words
+//     var objStem = new classStemmer($("#textUpload").val(), g_stemMinLen, g_minSimThres);
+//     var arrStemSent = objStem.translateWordToStem( objDoc.arrCompSent );
+//     var docStem = objStem.docWordToStem(objDoc.arrCompSent, false);     //true = includes common words, false = does not include common words
+
+//     //find the top-occurring words
+//     var docAnlys = new DocAnalysis(docStem, arrStemSent);
+//     var arrTopStems = docAnlys.top_words(-12);        //the parameter is the standard deviation
+
+//     //retrieve all top words
+//     var arrTopWords = [];
+//     for ( var eachStem of arrTopStems ) {
+
+//         //if key is not present, then do not look for associated stems
+//         if ( !(eachStem in objStem.hashSOW) )
+//             continue
+
+//         for ( var getWord of objStem.hashSOW[eachStem] )
+//             arrTopWords.push(getWord);
+//     }
+
+//     //find all questions that can be answered for each word
+//     var allQA = "";
+//     var catechizer = new Catechizer();
+//     for (var eachWord of arrTopWords) {
+//         var recordQA = [];
+
+//         //create transposable element for DiversiFuzzy & RegExpFuzzy
+//         var transposon = { "x": ["\\b" + eachWord + "\\b::0::0"] };
+
+//         //go through each sentence to see which questions can be asked for each word
+//         for (var i in objDoc.arrCompSent) {
+//             //see which question structures are present
+//             var getQT = [];
+//             getQT = catechizer.answerPresentTEMP( objDoc.arrCompSent[i], transposon );
+
+//             //if questions found, then prepare for display
+//             var eachQA = "";
+//             if (getQT.length > 0) {
+//                 eachQA += "<div class = 'boxQuestion'> Q: " + getQT + " " + eachWord + "</div>";
+//                 eachQA += "<div class = 'boxAnswer'> A: " + objDoc.arrCompSent[i] + " (" + i + ")</div><br/><br/>";
+//                 recordQA.push(eachQA);
+//             }
+//         }
+
+//         //if any QA pairs are recorded, then save to variable 'allQA' to present later
+//         if (recordQA.length > 0) {
+//             var setQA = printQA(recordQA, eachWord);
+//             allQA += setQA;
+//         }
+//     }
+
+//     $("#areaQues").html(allQA);
+// }
+
+function displayQuestions(allPairQA) {
+    //METHOD: displays questions & answers
+    allQA = "";
+    for (var x of allPairQA) {
+        allQA += "<div class = 'boxQuestion'> Q: " + x[0] + "</div>";
+        allQA += "<div class = 'boxAnswer'> A: " + x[1] + "</div><br/><br/>";
+    }
+
+    $("#areaQues").html(allQA);
+}
+
+function date160307_makeQues2 () {
+    //METHOD: creates Q & A based on document
+
+    //retrieve document & split into full sentences
+    var objDoc = new FullSent( $("#textUpload").val(), g_sentThres );
+
+    //class DocManip - manipulate words in document
+    // var objDocManip = new DocManip();
+    // var docNCW = objDocManip.remove_cw($("#textUpload").val());     //docNCW = doc No Common Words
+    // var objDocNCW = new FullSent(docNCW, g_sentThres - 10);
+
+    //create stem words
+    var objStem = new classStemmer($("#textUpload").val(), g_stemMinLen, g_minSimThres);
+    var arrStemSent = objStem.translateWordToStem( objDoc.arrCompSent );
+    var docStem = objStem.docWordToStem(objDoc.arrCompSent, false);     //does not include common words
+
+    //find the top-occurring words
+    var docAnlys = new DocAnalysis(docStem, arrStemSent);
+    var standardDev = -12;        //standard deviation for top words
+    var objTopWords = docAnlys.top_words(standardDev);
+    var arrTopWords = Object.keys(objTopWords);     //these are the top stem words 
+
+    //find which sentences contain the top-occurring words & then form questions
+    var objSearch = new SearchWord(arrStemSent, objStem.hashOWS, objStem.hashSOW);
+    var occurTopWords = objSearch.find_words(arrTopWords);
+
+    //ask question for each sentence
+    var objQ = new CatechizerV0();
+    
+    // var topWord = arrTopWords[1];
+    // var arrSentI = occurTopWords[topWord];
+    // console.log("wordI = ", topWord);
+
+    var allPairQA = [];        //saves the question & answer pairs
+    for (var i in arrTopWords) {
+        //need to retrieve all words associated with stem
+        var arrSentI = occurTopWords[arrTopWords[i]];
+        var sow = objStem.hashSOW[arrTopWords[i]];      //sow = stem to original word, object where k = stem word, v = array of words associated with stem word
+        // console.log("arrTopWords[i] = ", sow);
+        for (var i2 in sow) {
+            var pairQA = date160307_quesFindAndPhrase(sow[i2], arrSentI, objDoc, objQ);
+            allPairQA = allPairQA.concat(pairQA);
+        }
+    }
+
+    //display questions onto HTML page
+    displayQuestions(allPairQA);
+
+
+    // //go through each sentence
+    // for (var i in arrSentI) {        //arrSentI = array of sentence indices that contains word of interest
+    //  //see potential questions that can be asked
+    //  var currSent = objDoc.arrCompSent[arrSentI[i]];
+    //  var possibleQues = objQ.questionType(currSent);
+        
+    //  //phrase question
+    //  // date160307_phraseQues2( topWord, possibleQues );
+    //  //phrase question
+    //  for (var ques in possibleQues) {        //ques = question type, possibleQues[ ques ] = array of words found that address question
+    //      var quesType = possibleQues[ques];
+    //      for ( var i in quesType ) {         //quesType[ i ] = word in category
+    //          console.log( "phrase question: " + objQ.questionPhrase(topWord, ques, quesType[i]) + 
+    //              "\n ANS: " + currSent );
+    //      }
+    //  }
+    // }
+
+
+    //TEST:
+    // console.log( "arrTopWords = ", arrTopWords );
+    // console.log( "occurTopWords = ", occurTopWords );
+}
+
+</script>
+
+</head>
+
+<body>
+<textarea id = "textUpload"></textarea>
+<br/>
+<button onclick = "makeQuesV4()">Generate Questions</button>
+
+<br/><br/>
+
+<div id = "areaQues"> Show Questions Here </div>
+</body>
+
+</html>

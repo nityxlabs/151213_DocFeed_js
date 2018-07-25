@@ -1,0 +1,180 @@
+<html>
+<head>
+
+<title> 160314_Catechizer </title>
+
+<style>
+body {
+    background-color:#21252c;
+    font-family:Rockwell, "Courier New", Courier, Georgia, serif;
+    color:#282c35;
+    /*OTHER COLORS: Pink = f92772; Purple = ae81ff; Teal = 66d9ef; orange = fd9720;  */
+}
+
+.boxQuestion, .boxAnswer {
+    color: #6699cc;
+    font: 20px Rockwell, "Courier New", Courier, Georgia, serif;
+    text-align:left;
+    width:600px;
+    -moz-border-radius: 10px;
+    -webkit-border-radius: 10px;
+    border-radius: 10px;
+    cursor:pointer;
+}
+
+.boxAnswer {
+    color: #b2436d;
+}
+</style>
+
+<script src = "/Users/Mokha/Documents/Web Design/Nityxlabs/JS Scripts/jQuery/jquery-2.1.4.min.js"></script>
+<script src="/Users/Mokha/Documents/Web Design/Nityxlabs/JS Scripts/XDoc_StrTools.js"></script>
+
+<!-- 
+<script src="/Users/Mokha/Documents/Web Design/Nityxlabs/151213_DocFeed_js/Classes/FullSent.js"></script>
+<script src="/Users/Mokha/Documents/Web Design/Nityxlabs/151213_DocFeed_js/Classes/classStemmer.js"></script>
+<script src="/Users/Mokha/Documents/Web Design/Nityxlabs/151213_DocFeed_js/Classes/DocAnalysis.js"></script>
+<script src="/Users/Mokha/Documents/Web Design/Nityxlabs/151213_DocFeed_js/Classes/SearchWord.js"></script> 
+-->
+<script src="Classes/FullSent.js"></script>
+<script src="Classes/classStemmer.js"></script>
+<script src="Classes/DocManip.js"></script>
+<script src="Classes/DocAnalysis.js"></script>
+<script src="Classes/SearchWord.js"></script>
+
+<script src = "Classes/CatechizerV0.js"></script>
+<script src = "Classes/CatechizerV1.js"></script>
+
+<script type = "text/javascript">
+//Global variables START//
+var isIE = document.all;
+
+function date160307_quesFindAndPhrase (word, isents, objDoc, objQ) {
+    //VAR: word = string that is word that will be search
+    //VAR: isents = array of sentence indices that access sentences in objDoc.arrCompSent
+    //VAR: objDoc = 
+    //VAR: objQ = instance of class CatechizerV0
+    //METHOD: finds sentences that can be potential answer to questions & phrases the question
+
+    //go through each sentence
+    var pairQA = [];        //save question & answer pairs
+    for (var i in isents) {     //isents = array of sentence indices that contains word of interest
+        //see potential questions that can be asked
+        var currSent = objDoc.arrCompSent[isents[i]];
+        var possibleQues = objQ.questionTypeV2(word, currSent);
+        
+        //phrase question
+        for (var ques in possibleQues) {        //ques = question type, possibleQues[ ques ] = array of words found that address question
+            var quesType = possibleQues[ques];
+            for (var i in quesType) {         //quesType[ i ] = word in category
+                // console.log( "phrase question: " + objQ.questionPhrase(word, ques, quesType[i]) + 
+                //     "\n ANS: " + currSent );
+                var phraseQuestion = objQ.questionPhrase(word, ques, quesType[i]);
+                pairQA.push([phraseQuestion, currSent]);
+            }
+        }
+    }
+
+    return pairQA;
+}
+
+function displayQuestions(allPairQA) {
+    //METHOD: displays questions & answers
+    allQA = "";
+    for (var x of allPairQA) {
+        allQA += "<div class = 'boxQuestion'> Q: " + x[0] + "</div>";
+        allQA += "<div class = 'boxAnswer'> A: " + x[1] + "</div><br/><br/>";
+    }
+
+    $("#areaQues").html(allQA);
+}
+
+function date160307_makeQues2 () {
+    //METHOD: creates Q & A based on document
+
+    //retrieve document & split into full sentences
+    var sentThres = 20;             //this is the minimum sentence character length to be considered a true sentence
+    var stemMinLen = 2;         //the minimum character length for a string to be considered a stem
+    var minSimThres = 0.9;      //minimum percentage similarity for 2 strings to be considered similar
+    var objDoc = new FullSent($("#textUpload").val(), sentThres);
+
+    //class DocManip - manipulate words in document
+    // var objDocManip = new DocManip();
+    // var docNCW = objDocManip.remove_cw($("#textUpload").val());     //docNCW = doc No Common Words
+    // var objDocNCW = new FullSent(docNCW, sentThres - 10);
+
+    //create stem words
+    var objStem = new classStemmer($("#textUpload").val(), stemMinLen, minSimThres);
+    var arrStemSent = objStem.translateWordToStem( objDoc.arrCompSent );
+    var docStem = objStem.docWordToStem(objDoc.arrCompSent, false);     //does not include common words
+
+    //find the top-occurring words
+    var docAnlys = new DocAnalysis(docStem, arrStemSent);
+    var arrTopWords = docAnlys.top_words(-12);        //the parameter is the standard deviation
+
+    //find which sentences contain the top-occurring words & then form questions
+    var objSearch = new SearchWord(arrStemSent, objStem.hashOWS, objStem.hashSOW);
+    var occurTopWords = objSearch.find_words(arrTopWords);
+
+    //ask question for each sentence
+    var objQ = new CatechizerV0();
+    
+    // var topWord = arrTopWords[1];
+    // var arrSentI = occurTopWords[topWord];
+    // console.log("wordI = ", topWord);
+
+    var allPairQA = [];        //saves the question & answer pairs
+    for (var i in arrTopWords) {
+        //need to retrieve all words associated with stem
+        var arrSentI = occurTopWords[arrTopWords[i]];
+        var sow = objStem.hashSOW[arrTopWords[i]];      //sow = stem to original word, object where k = stem word, v = array of words associated with stem word
+        // console.log("arrTopWords[i] = ", sow);
+        for (var i2 in sow) {
+            var pairQA = date160307_quesFindAndPhrase(sow[i2], arrSentI, objDoc, objQ);
+            allPairQA = allPairQA.concat(pairQA);
+        }
+    }
+
+    //display questions onto HTML page
+    displayQuestions(allPairQA);
+
+
+    // //go through each sentence
+    // for (var i in arrSentI) {        //arrSentI = array of sentence indices that contains word of interest
+    //  //see potential questions that can be asked
+    //  var currSent = objDoc.arrCompSent[arrSentI[i]];
+    //  var possibleQues = objQ.questionType(currSent);
+        
+    //  //phrase question
+    //  // date160307_phraseQues2( topWord, possibleQues );
+    //  //phrase question
+    //  for (var ques in possibleQues) {        //ques = question type, possibleQues[ ques ] = array of words found that address question
+    //      var quesType = possibleQues[ques];
+    //      for ( var i in quesType ) {         //quesType[ i ] = word in category
+    //          console.log( "phrase question: " + objQ.questionPhrase(topWord, ques, quesType[i]) + 
+    //              "\n ANS: " + currSent );
+    //      }
+    //  }
+    // }
+
+
+    //TEST:
+    // console.log( "arrTopWords = ", arrTopWords );
+    // console.log( "occurTopWords = ", occurTopWords );
+}
+
+</script>
+
+</head>
+
+<body>
+<textarea id = "textUpload"></textarea>
+<br/>
+<button onclick = "date160307_makeQues2()">Generate Questions</button>
+
+<br/><br/>
+
+<div id = "areaQues"> Show Questions Here </div>
+</body>
+
+</html>

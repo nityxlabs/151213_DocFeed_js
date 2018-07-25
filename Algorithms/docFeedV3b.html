@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>151230_docFeed.v3</title>
+<script src="/Users/Mokha/Documents/Web Design/Nityxlabs/JS Scripts/jQuery/jquery-2.1.4.min.js"></script>
+<script src="/Users/Mokha/Documents/Web Design/Nityxlabs/JS Scripts/hash.js"></script>
+<script src="/Users/Mokha/Documents/Web Design/Nityxlabs/JS Scripts/objHash.js"></script>
+<script src="/Users/Mokha/Documents/Web Design/Nityxlabs/JS Scripts/mathTools.js"></script>
+<script src="/Users/Mokha/Documents/Web Design/Nityxlabs/JS Scripts/XDoc_StrTools.js"></script>
+<script src="/Users/Mokha/Documents/Web Design/Nityxlabs/JS Scripts/XDoc_StrClasses.js"></script>
+<script src="/Users/Mokha/Documents/Web Design/Nityxlabs/JS Scripts/XDoc_StrTools_EXP.js"></script>
+<script type="text/javascript">
+//Global variables START//
+var isIE=document.all;
+
+//Global variables - saving versions of the document
+
+//Global variables - related to document//
+var g_objDoc;		//global variable that is for class classDocument
+var g_arrFullSent=[];			//array that will record the full sentences
+var g_sentThres=20;				//this is the minimum sentence character length to be considered a true sentence
+var g_period=". ";				//this is the character that will be placed at the end of each sentence
+var g_compSentDelim="::::";			//g_compSentDelim = global variable Complete Sentence Delimiter, this will be used to separate sentences that are deemed complete, full sentences
+
+//Global variables - stemmer class//
+var g_objStemmer;			//global variable that is for the class classStemmer
+var g_stemMinLen=3;			//the minimum character length for a string to be considered a stem
+var g_minSimThres=0.8;		//minimum percentage similarity for 2 strings to be considered similar
+
+//Global variables - related to style//
+var g_fontSize=12;
+
+//Global variables - nav bar//
+g_navbarLeft=225;
+g_navbarWidth=g_navbarLeft+25;
+
+//START: DEFINE CLASSES HERE//
+//CLASS 1 - objDoc//
+function getRawText()
+{
+	//METHOD: this function retrieves the text inserted into the "rawText" input field, manipulates it, & displays it		
+	//STEP: organize text in array where each element contains a complete sentence
+	g_objDoc=new classDocument($("#rawText").val(),g_sentThres,g_compSentDelim,g_stemMinLen,g_minSimThres);
+};
+
+
+function create_classStemmer()
+{
+	//METHOD: This function will create a stemmer class
+	var g_objStemmer=new classStemmer($("#rawText").val(),g_stemMinLen,g_minSimThres);
+};
+//END: DEFINE CLASSES HERE//
+
+
+// function setDoc_checkSentComplete_endSent(currSent)
+// {
+// 	//VAR: currSent = this is a string that will be checked (specifically, length & first character capitalized)
+// 	//METHOD: this function will check if the end of a sentence ends in a string that could invalidate if the sentence is a full sentence or not.
+// 	//OUTPUT: if no matches are found between "currSent" and any of the elements of "arrStrEndings", then this function will return "null". Else if there is a match found, the string that was matched will be returned (e.g. if string ends in "said the Dr", the " Dr" will be returned)
+
+// 	//STEP: create an array that will contain the strings that will be searched for at the end of the sentence
+// 	//NOTE: Make sure the space before the string is present
+// 	var arrStrEndings=new Array();
+// 	arrStrEndings.push(" Mrs");
+// 	arrStrEndings.push(" Ms");
+// 	arrStrEndings.push(" Dr");
+// 	arrStrEndings.push(" Mr");
+// 	arrStrEndings.push(" Ph");
+// 	arrStrEndings.push(" Ph. D");		//need to consider the space between "Ph." & "D" as the function "setDoc_organizeOrigText()" adds ". " to incomplete sentences
+
+// 	var strMatchEnd=null;		//boolean that will record if there is match between the strings. If there is a match, break out of the loop 
+// 	for(var x in arrStrEndings)
+// 	{
+// 		//STEP: extract the last n characters (lastNChar)
+// 		var numLastNChar=arrStrEndings[x].length;			//the last characters in the sentence that will be extracted, dependent on the length of string being searched for.
+// 		var numPosLastI=currSent.length-numLastNChar;		//retrieve the start position for the end of the sentence
+// 		var sentLastNChar=currSent.substring(numPosLastI);		//retrieve the last characters in the sentece
+
+// 		//STEP: check to see if there is am athc between the strings
+// 		var strMatchEnd=strTools_findMatch(arrStrEndings[x],sentLastNChar,"i");		//this disregards case-sensitivity
+// 		// var strMatchEnd=strTools_findMatch(arrStrEndings[x],sentLastNChar,"");			//this considers case-sensitivity
+// 		if(strMatchEnd!=null){break;}
+// 	}
+
+// 	return strMatchEnd;
+// }
+
+// function setDoc_checkSentComplete(currSent,nextSent,sentThres)
+// {
+// 	//VAR: currSent = this is a string that will be checked (specifically, length & first character capitalized)
+// 	//VAR: nextSent = this is the next sentence after currSent in the document
+// 	//VAR: sentThres = integer that will be used to compare to the length of the string "currSent"
+// 	//METHOD: this function checks if a sentence is a complete sentence or not, specifically if a sentence passes the length threshold and the first letter is capitalized
+// 	currSent=currSent.trim();
+// 	var sentStat=false;
+	
+// 	//STEP: check if the first character is capitalized & is a word character (e.g. not 0-9,-!&% etc.)
+// 	//The "lax" algorithm does not exclude spaces, numbers whereas the "strict" function does.
+// 	// var firstCharCap=strTools_checkFirstCharCap_Lax(currSent);
+// 	var firstCharCap=strTools_checkFirstCharCap_Strict(nextSent);
+// 	var checkSentEnd=setDoc_checkSentComplete_endSent(currSent);		//check to see if the ending of the sentence could nullify if the sentence is a complete sentence or not
+// 	if((currSent.length>=sentThres) && (firstCharCap) && (checkSentEnd==null)){sentStat=true;}
+
+// 	return sentStat;
+// }
+
+// function setDoc_organizeOrigText(getText,sentThres,delimFSS,delimEOS)
+// {
+// 	//VAR: getText = a string of text that will be split into sentences 
+// 	//VAR: sentThres = number that is a threshold value for the minimum character length for a sentence
+// 	//VAR: delimFSS (delimiter Full Sentence Separator) = a string that serves as a delimiter to separate identified full sentences
+// 	//VAR: delimEOS (delimiter End Of Sentence) = a string that will be appended at the end of each full sentence
+// 	//METHOD: this function will split the document into full, individual sentences
+// 	var arrSent=getText.split(".");
+// 	arrSent=arrTools_removeBlanks(arrSent);
+// 	//STEP: go through array, checking the next sentence
+// 	var tempCompileSent="";		//this variable will compile the temporary sentence until a "whole" sentence is formed (a "whole" sentence is determined by the function "setDoc_checkSentComplete()")
+// 	var strFullSent="";			//this variable will record the full sentences and separate the sentences 
+// 	for(var a=0;a<arrSent.length;a++)
+// 	{
+// 		//remove blanks at the ends of the sentence
+// 		arrSent[a]=arrSent[a].trim();
+// 		//make sure there is text in the array element, else I can skip that element
+// 		if(/\S/.test(arrSent[a]) && (a<arrSent.length-1))		//these are all the sentences before the last sentence
+// 		{
+// 			//STEP: add the sentence to the compile variable "tempCompileSent" & 
+// 			tempCompileSent+=arrSent[a];			//add each sentence to the temporary sentence compiler
+// 			// var statNS=strTools_checkFirstCharCap_Strict(arrSent[a]);		//statNS = status New Sentence - is the next sentence a new sentence
+// 			var statNS=setDoc_checkSentComplete(tempCompileSent,arrSent[a+1],sentThres);		//statNS = status New Sentence - is the next sentence a new sentence
+			
+// 			//STEP: check the boolean variable statNS (status of new sentence) 
+// 			if(statNS)		//if true, then add this "full sentence" to the variable recording full sentences
+// 			{
+// 				if(strFullSent===""){strFullSent+=tempCompileSent+""+delimEOS;}
+// 				else{strFullSent+=delimFSS+""+tempCompileSent+""+delimEOS;}
+// 				tempCompileSent="";
+// 			}
+// 			//else is not considered a complete sentence
+// 			else{tempCompileSent+=". ";}
+// 		}
+// 		else if(/\S/.test(arrSent[a]) && (a===arrSent.length-1))		//this is the last sentence
+// 		{
+// 			tempCompileSent+=arrSent[a];		//add the last sentence to the compile variable, as "tempCompileSent"
+// 			var statNS=setDoc_checkSentComplete(tempCompileSent,tempCompileSent,sentThres);
+// 			if(statNS){strFullSent+=delimFSS+""+tempCompileSent+""+delimEOS;}		//if statNS=true, this considered a complete sentence, then make it an individual sentence by adding the delimiter "delimFSS"
+// 			else{strFullSent+=tempCompileSent+". ";}			//else statNS=false, just add it as an addition to the penultimate sentence
+// 		}
+// 	}
+
+// 	return strFullSent;
+// };
+
+function flashSentence()
+{
+	//METHOD: this function will retrieve the sent and display it for a transient time
+	var inputSpeed=parseInt($("#setSpeed").val());
+	var offsetY=50;
+	var testSent="<span id='newSent' style='position:relative;'>Hey this is a test sentence</span>";
+	$("#displayText").html(testSent);
+
+	//STEP: get the offset height & width - will only retrieve the height & width of an element after it exists in the DOM
+	var getOuterHeight=$("#newSent").outerHeight();
+	var getOuterWidth=$("#newSent").outerWidth();
+
+	//STEP: get the middle point of the height & width
+	var midHeight=(parseInt($("#displayText").css("height"))-getOuterHeight)/2;
+	var midWidth=(parseInt($("#displayText").css("width"))-getOuterWidth)/2;
+	console.log("midHeight = "+midHeight+" && midWidth = "+midWidth);
+	
+	//STEP: position the string sentence
+	// $("#newSent").css({"top":midHeight+50+"px","left":midWidth+"px","opacity":"0.2"});
+	$("#newSent").css({"top":midHeight+offsetY,"left":midWidth,"opacity":"0"});
+
+	//STEP: animate newly added text
+	$("#newSent").animate({
+		top: "-="+offsetY,
+		opacity: "1"
+	},"slow").delay(inputSpeed).animate({
+		top: "-="+offsetY,
+		opacity: "0"
+	},"slow");
+}
+
+function flashSentV2_getSentI_v0(getArr,boolShuffle)
+{
+	
+	//VAR: boolShuffle = boolean value. If true, will shuffle the sentence indices, else if false, will not shuffle the sentence indices
+	//METHOD: this function will retrieve the sentence indices that contain a specific set of words within a specific sentence radius
+
+	//STEP: retrieve all the sentence indices and put into an array
+	var arrSentI=[];
+	for(var x=0;x<getArr.length;x++)
+		arrSentI.push(x);
+
+	//STEP: shuffle the array
+	if(boolShuffle)
+		arrSentI.sort(function(){return 0.5-Math.random();});
+
+	return arrSentI;
+};
+
+function flashSentV2_getSentI_v1(strWords)
+{
+	//VAR: strWords = string of words separated by delimiter "::" that will be used to search for sentences with words in "strWords"
+	//METHOD: this function will retrieve the sentence indices that contain a specific set of words within a specific sentence radius
+
+	//STEP: retrieve all the sentence
+
+};
+
+function flashSentV4_display(arrSentI,loopCounter,boolStat)
+{
+	//VAR: arrSentI = array of sentence indices that are shuffled
+	//VAR: loopCounter = integer that will access each index in the array "arrSentI"
+	//VAR: boolStat = boolean that, if true, will continue to randomly show sentences, else if false will stop showing sentences
+	//METHOD: this function will display sentences in a fading manner
+	//STEP: retrieve the sentence to display
+	var offsetY=50;
+	var inputSpeed=parseInt($("#setSpeed").val())*1000;		//Need to convert it into milliseconds
+	var currSentI=arrSentI[loopCounter%(arrSentI.length)];
+
+	console.log("fSV4_All - currSentI = "+currSentI+" | "+g_objDoc.arrCompSent[currSentI]);
+
+	//STEP: place text within flash window & position it
+	var dispSent="<span id='newSent' style='position:relative;font:"+g_fontSize+"px Rockwell, Georgia, serif;'>"+g_objDoc.arrCompSent[currSentI]+"</span>";
+	$("#displayText").html(dispSent);
+
+
+	//STEP: get the offset height & width - will only retrieve the height & width of an element after it exists in the DOM
+	var getOuterHeight=$("#newSent").outerHeight();
+	var getOuterWidth=$("#newSent").outerWidth();
+
+	//STEP: get the middle point of the height & width
+	var midHeight=(parseInt($("#displayText").css("height"))-getOuterHeight)/2;
+	var midWidth=(parseInt($("#displayText").css("width"))-getOuterWidth)/2;
+	
+	//STEP: position the string sentence
+	$("#newSent").css({"top":midHeight+offsetY,"left":midWidth,"opacity":"0"});
+
+	//STEP: Start the animation 
+	if(boolStat)
+	{
+		$("#newSent").animate({
+			top: "-="+offsetY,
+			opacity: "1"
+		},"slow").delay(inputSpeed).animate({
+			top: "-="+offsetY,
+			opacity: "0"
+		},"slow", function(){
+			loopCounter++;
+			flashSentV4_display(arrSentI,loopCounter,boolStat);
+		});
+	}
+	//Else cease the animation
+	//METHOD 1: remove all text from viewing box
+	// else
+	// {
+	// 	$("#newSent").animate({
+	// 		top: "-="+offsetY,
+	// 		opacity: "1"
+	// 	},"slow").stop();
+	// }
+	//METHOD 2: leave last sentence showing
+	else
+	{
+		$("#newSent").stop();
+		$("#newSent").animate({
+			top: "-="+offsetY,
+			opacity: "1"
+		},"slow");
+	}
+}
+
+function flashSentV4(boolStat)
+{
+	//VAR: boolStat = boolean that, if true, will continue to randomly show sentences, else if false will stop showing sentences
+	//METHOD: this function will prepare variables needed for function flashSentV4_display()
+
+	//STEP: retrieve the sentence indices of interest, should return an array of indices
+	var arrSentI=flashSentV2_getSentI_v0(g_objDoc.arrCompSent,false);
+
+	//STEP: go through each sentence index, displaying each sentence
+	var loopCounter=0;		//loopCounter = this will continue to access different elements in the array "g_arrFullSent"
+	flashSentV4_display(arrSentI,loopCounter,boolStat);
+}
+
+function navBar_move()
+{
+	//STEP: move box out
+	console.log("navbar left = "+parseInt($("#navbar").css("left")));
+	if(parseInt($("#navbar").css("left"))<0)
+		$("#navbar").animate({left:"+="+g_navbarLeft},"slow");
+	else
+		$("#navbar").animate({left:"-="+g_navbarLeft},"slow");
+}
+
+function onLoad_sizeAreas()
+{
+	//STEP: size the flash window for viewing the sentences
+	var docWidth=$(window).width();
+	var docHeight=$(window).height();
+	
+	//STEP: calculate the width & height for the flash window
+	var percentSize=0.90;
+	var flashDisp_height=docHeight*percentSize;
+	var flashDisp_width=docWidth*percentSize;
+	// var flashDisp_top=(docHeight-flashDisp_height)/2;
+	// var flashDisp_left=(docWidth-flashDisp_width)/2;
+	$("#displayText").css({"position":"absolute","top":10,"left":35,"height":flashDisp_height,"width":flashDisp_width,"z-index":1,"padding":"25px"});
+
+	//STEP: set the font-size
+	var percentFont=0.05;
+	g_fontSize=docHeight*percentFont;		//global variable that sets the font-size
+
+	//STEP: size the navigation bar
+	$("#navbar").css({"height":docHeight,"width":g_navbarWidth,"position":"absolute","top":"0px","left":g_navbarLeft*-1,"z-index":5,"background-color":"#232323","color":"#AAAAAA","opacity":0.8});
+
+	//TEST::
+	console.log("onLoad_sizeAreas - font size = "+g_fontSize);
+};
+
+
+//FUNCTIONS TO SET THE WORK AREA//
+$(window).ready(onLoad_sizeAreas);
+$(window).resize(onLoad_sizeAreas);
+
+</script>
+</head>
+
+<body>
+	<div id="navbar">
+		<span id="navbar_tab" style="position:absolute;top:0px;right:3px;font-size:20px;cursor:pointer;" onclick="navBar_move()">&#187;</span>
+
+		<table>
+		<tr><td>
+			<textarea id="rawText" row="1" col="20">Enter Text Here</textarea>
+			<br/>
+			<button onclick="getRawText()">Submit Raw Text</button>
+		</td></tr>
+		<tr><td>
+			<input id="setSpeed" type="text" value="5" size="2"/>sec
+		</td></tr>
+		<tr><td>
+			<button onclick="flashSentV4(true)">Start Flash</button>
+			&nbsp;
+			<button onclick="flashSentV4(false)">STOP</button>
+		</td></tr>
+		<tr><td>
+			<button onclick="create_classStemmer()">Create Stemmer</button>
+		</td></tr>
+	</table>
+	</div>
+
+	<div id="displayText" style="background-color:#EEEEEE;"></div>
+</body>
+</html>
+<!-- 
+docFeed Journal
+
+15.12.30 - creating a stemmer algorithm
+*creating a stemmer algorithm will allow to assist in the following:
+	*be able to find key words in a document
+	*be able to cluster sentences with similar words (e.g. computation, computational, computationally)
+
+
+-->

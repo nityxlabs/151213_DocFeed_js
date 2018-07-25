@@ -1,0 +1,30 @@
+* {
+    font-family: Rockwell, "Courier New", Courier, Georgia, serif;
+    line-height: 100%;
+}
+
+body {
+    background-color: #21252c;
+    font-family: Rockwell, "Courier New", Courier, Georgia, serif;
+    color: #282c35;
+    /*OTHER COLORS: Pink = f92772; Purple = ae81ff; Teal = 66d9ef; orange = fd9720;  */
+}
+
+/* Elements with IDs */
+#navbar {
+    background-color: #232323;
+    color: #6699cc;
+    opacity: 0.8;
+}
+
+#displayText {
+    background-color: #272b34;
+    /* cloud blue */
+    /*color: #6699cc;*/
+
+    /* steel blue */
+    /*color: #a4abb9; */
+
+    /* pink red */
+    color: #b2436d;
+}
